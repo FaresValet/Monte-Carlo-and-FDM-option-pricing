@@ -37,13 +37,14 @@ for i in range(100):
 
 R=[r0[1]]*100 
 U=[(0.25*0.03)/0.25 - 0.5*(0.02/0.25)**2]*100
-plt.plot(Time,Y,c="r")
+plt.plot(Time,Y,c="r",label='Yield for $r_{0}$=0.01')
 
-plt.plot(Time,Y2,c="b")
+plt.plot(Time,Y2,c="b",label='Yield for $r_{0}$=0.027')
 
-plt.plot(Time,Y3,c="y")
+plt.plot(Time,Y3,c="y",label='Yield for $r_{0}$=0.05')
 
-plt.title("Yield Curve")
+plt.title("Yield Curves")
+plt.legend()
 plt.show()
 plt.plot(Time,Y2)
 plt.plot(Time,R,c="r",label="r0")
@@ -147,9 +148,9 @@ while np.linalg.norm(d,2)>Epsilon:
     for j in range(3):
         d=-np.dot(np.linalg.inv(np.dot(Jacob.T,Jacob)+lamb*np.identity(3)),np.dot(Jacob.T,Res))
         Beta[j]=Beta[j]+d[j]
-    print(Beta)
+print("Parameters for t=0 are", Beta)
 
-plt.plot(Maturity,MarketYields,c='r',label='Market Yields')
+plt.scatter(Maturity,MarketYields,c='r',label='Market Yields')
 plt.plot(Maturity,Yields,c='b',label='Vasicek Yields')
 plt.title("Market Yields and Theoretical Yields with Calibrated Model at t=0")
 plt.legend()
@@ -157,7 +158,7 @@ plt.show()
 # =============================================================================
 # Part 3 : Recalibration of the yield curve with t=1 (one year) data
 # =============================================================================
-Beta2=[0.1,0.1,0.1]
+Beta2=[0.05,0.05,0.05]
 Jacob2=np.zeros((10,3))
 Res2=[0]*10
 d2=np.array([1]*3)
@@ -180,9 +181,9 @@ while np.linalg.norm(d2,2)>Epsilon:
     for j in range(3):
         d2=-np.dot(np.linalg.inv(np.dot(Jacob2.T,Jacob2)+lamb*np.identity(3)),np.dot(Jacob2.T,Res2))
         Beta2[j]=Beta2[j]+d2[j]
-    print(Beta2)
+print("Parameters for t=1 are", Beta2)
 
-plt.plot(Maturity,MarketYields2,c='r',label='Market Yields')
+plt.scatter(Maturity,MarketYields2,c='r',label='Market Yields')
 plt.plot(Maturity,Yields2,c='b',label='Vasicek Yields')
 plt.title("Market Yields and Theoretical Yields with Calibrated Model at t=1")
 plt.legend()
@@ -191,51 +192,59 @@ plt.show()
 # Part 4: Calibration to historical dates and linear regression to find the best predictive linear pattern of interest rates
 # =============================================================================
 Vect=[1,1]
+step=100
 def interestrate(r,etha,gamma,sigma,T,N):
     dt=T/N
     Rate=[r]
     for i in range(N):
-        Rate.append(Rate[-1]*np.exp(-gamma*dt) + etha/gamma * (1-np.exp(-gamma*dt)) + sigma*np.sqrt((1-np.exp(-2*gamma*dt))/2*gamma)*np.random.normal())
+        Rate.append(Rate[-1]*np.exp(-gamma*dt) + etha/gamma * (1-np.exp(-gamma*dt)) + np.sqrt(sigma**2 * (1-np.exp(-2*gamma*dt))/2*gamma)*np.random.normal(0,1))
     
     return Rate
-x=interestrate(0.27,0.6,4,0.08,5,10000)
+x=interestrate(0.10,0.6,4,0.08,5,step)
 y=x[1:]
 plt.plot(x)
 plt.title(" theoretical interest rate")
 plt.show()
-Jacob3=np.zeros((10000,2))
-Data1=x[:10000]
+Jacob3=np.zeros((step,2))
+Data1=x[:step]
 d3=[0.1,0.1]
-Droite=[0]*10000
-Res3=[0]*10000
+Droite=[0]*step
+Res3=[0]*step
 Epsilon=10**(-9)
 while np.linalg.norm(d3,2)>Epsilon:
     for j in range(2):
-        for i in range(10000):
+        for i in range(step):
             if j==0:
                 Jacob3[i][j]=-Data1[i]
             elif j==1:
                 Jacob3[i][j]=-1
             
     
-    for i in range(10000):
+    for i in range(step):
         Droite[i]=Vect[0]*Data1[i]+Vect[1]
         Res3[i]=y[i]-Droite[i]
     
     for j in range(2):
         d3=-np.dot(np.linalg.inv(np.dot(Jacob3.T,Jacob3)+lamb*np.identity(2)),np.dot(Jacob3.T,Res3))
         Vect[j]=Vect[j]+d3[j]
-    print(Vect)
+print('Our parameters a and b are ', Vect)
 yapproach=[i*Vect[0]+Vect[1] for i in Data1]
 Error=[a_i - b_i for a_i, b_i in zip(y, yapproach)]
-plt.scatter(x[:10000],y, label="interest rate data")
-plt.plot(x[:10000],yapproach,c='g', label="linear approximation")
+plt.scatter(x[:step],y, label="interest rate data")
+plt.plot(x[:step],yapproach,c='g', label="linear approximation")
 plt.title("Linear regression to find the line which fits the interest rate prediction the best y(r_i)=r_(i+1)")
 plt.legend()
 plt.show()
 print("Variance is equal to ", np.var(Error))
-dt=5/10000
+"""x=x[:step]
+x=np.array(x)
+y=np.array(y)
+x=x.reshape(x.shape[0],1)
+y=y.reshape(y.shape[0],1)
+X=np.hstack((x,np.ones(x.shape)))
+theta=np.linalg.inv(np.dot(X.T,X)).dot(np.dot(X.T,y))"""
+dt=5/step
 TheoreticalGamma=-np.log(Vect[0])/dt
 TheoreticalEtha=TheoreticalGamma*(Vect[1])/(1-Vect[0])
-TheoreticalSigma=np.sqrt(np.var(Error))*np.sqrt(-2*np.log(Vect[0])/(dt*(1-Vect[0]**2)))
+TheoreticalSigma=np.std(Error)*np.sqrt(-2*np.log(Vect[0])/(dt*(1-Vect[0]**2)))
 TheoreticalVector=[TheoreticalEtha,TheoreticalGamma,TheoreticalSigma]
