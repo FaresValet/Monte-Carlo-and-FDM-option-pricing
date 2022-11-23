@@ -109,11 +109,9 @@ ax.set_title('surface')
 # =============================================================================
 # Part 2 : Calibration of the vasicek model to the Yield curve from the market
 # =============================================================================
-Maturity=[3*i for i in range(1,11)]
 MarketYields=[0.035,0.041,0.0439,0.046,0.0484,0.0494,0.0507,0.0517,0.052,0.0523]
-Yields=[0]*10
+MarketYields2=[0.056,0.064,0.074,0.081,0.082,0.09,0.087,0.092,0.0895,0.091]
 Res=[0]*10
-d=np.array([1]*3)
 Beta=[0.1,0.1,0.1]
 r0=0.023
 Epsilon=10**(-9)
@@ -129,122 +127,101 @@ def Bderivative(gamma,t,T):
 def Aderivative(gamma,sigma,etha,t,T):
     B=((1-np.exp(-gamma*(T-t)))/gamma)
     return (etha*(Bderivative(gamma, t, T)*gamma - B)+(T-t)*etha - 0.5*sigma**2 * (Bderivative(gamma, t, T)-2*B/gamma)-((T-t)/gamma) *sigma**2 -0.25*sigma**2 * B * (2*gamma*Bderivative(gamma, t, T) - B))/gamma**2
-
-Jacob=np.zeros((10,3))
-while np.linalg.norm(d,2)>Epsilon:
-    for j in range(3):
-        for i in range(10):
-            if j==0:
-                Jacob[i][j]=(B(0,Maturity[i],Beta[2])-(Maturity[i]))/(Maturity[i]*Beta[2])
-            elif j==1:
-                Jacob[i][j]=-((B(0,Maturity[i],Beta[2])-Maturity[i])/(2*Beta[2]) + 0.25*B(0,Maturity[i],Beta[2])**2)*1/(Maturity[i]*Beta[2])
-            else:
-                Jacob[i][j]=1/Maturity[i] * (Aderivative(Beta[2], np.sqrt(Beta[1]), Beta[0], 0, Maturity[i]) - r0*Bderivative(Beta[2],0, Maturity[i]))
-    
-    for i in range(10):
-        Yields[i]=-(A(0,Maturity[i],Beta[2],Beta[0],np.sqrt(Beta[1]))-r0*B(0,Maturity[i],Beta[2]))/Maturity[i]
-        Res[i]=MarketYields[i]-Yields[i]
-    
-    for j in range(3):
-        d=-np.dot(np.linalg.inv(np.dot(Jacob.T,Jacob)+lamb*np.identity(3)),np.dot(Jacob.T,Res))
-        Beta[j]=Beta[j]+d[j]
-print("Parameters for t=0 are", Beta)
-
-plt.scatter(Maturity,MarketYields,c='r',label='Market Yields')
-plt.plot(Maturity,Yields,c='b',label='Vasicek Yields')
-plt.title("Market Yields and Theoretical Yields with Calibrated Model at t=0")
-plt.legend()
-plt.show()
-# =============================================================================
-# Part 3 : Recalibration of the yield curve with t=1 (one year) data
-# =============================================================================
-Beta2=[0.05,0.05,0.05]
-Jacob2=np.zeros((10,3))
-Res2=[0]*10
-d2=np.array([1]*3)
-MarketYields2=[0.056,0.064,0.074,0.081,0.082,0.09,0.087,0.092,0.0895,0.091]
-Yields2=[0]*10
-while np.linalg.norm(d2,2)>Epsilon:
-    for j in range(3):
-        for i in range(10):
-            if j==0:
-                Jacob2[i][j]=(B(1,Maturity[i],Beta2[2])-(Maturity[i])+1)/((Maturity[i]-1)*Beta2[2])
-            elif j==1:
-                Jacob2[i][j]=-((B(1,Maturity[i],Beta2[2])-Maturity[i]+1)/(2*Beta2[2]) + 0.25*B(1,Maturity[i],Beta2[2])**2)*1/((Maturity[i]-1)*Beta2[2])
-            else:
-                Jacob2[i][j]=1/(Maturity[i]-1) * (Aderivative(Beta2[2], np.sqrt(Beta2[1]), Beta2[0], 1, Maturity[i]) - r0*Bderivative(Beta2[2],1, Maturity[i]))
-    
-    for i in range(10):
-        Yields2[i]=-(A(1,Maturity[i],Beta2[2],Beta2[0],np.sqrt(Beta2[1]))-r0*B(1,Maturity[i],Beta2[2]))/(Maturity[i]-1)
-        Res2[i]=MarketYields2[i]-Yields2[i]
-    
-    for j in range(3):
-        d2=-np.dot(np.linalg.inv(np.dot(Jacob2.T,Jacob2)+lamb*np.identity(3)),np.dot(Jacob2.T,Res2))
-        Beta2[j]=Beta2[j]+d2[j]
-print("Parameters for t=1 are", Beta2)
-
-plt.scatter(Maturity,MarketYields2,c='r',label='Market Yields')
-plt.plot(Maturity,Yields2,c='b',label='Vasicek Yields')
-plt.title("Market Yields and Theoretical Yields with Calibrated Model at t=1")
-plt.legend()
-plt.show()
-# =============================================================================
-# Part 4: Calibration to historical dates and linear regression to find the best predictive linear pattern of interest rates
-# =============================================================================
-Vect=[1,1]
-step=100
-def interestrate(r,etha,gamma,sigma,T,N):
-    dt=T/N
-    Rate=[r]
-    for i in range(N):
-        Rate.append(Rate[-1]*np.exp(-gamma*dt) + etha/gamma * (1-np.exp(-gamma*dt)) + np.sqrt(sigma**2 * (1-np.exp(-2*gamma*dt))/2*gamma)*np.random.normal(0,1))
-    
-    return Rate
-x=interestrate(0.10,0.6,4,0.08,5,step)
-y=x[1:]
-plt.plot(x)
-plt.title(" theoretical interest rate")
-plt.show()
-Jacob3=np.zeros((step,2))
-Data1=x[:step]
-d3=[0.1,0.1]
-Droite=[0]*step
-Res3=[0]*step
-Epsilon=10**(-9)
-while np.linalg.norm(d3,2)>Epsilon:
-    for j in range(2):
-        for i in range(step):
-            if j==0:
-                Jacob3[i][j]=-Data1[i]
-            elif j==1:
-                Jacob3[i][j]=-1
+def YieldCalib(MYields,t,etha,gamma,sigmasquared,epsilon):
+    Jacob=np.zeros((10,3))
+    Maturity=[3*i for i in range(1,11)]
+    d=[1,1,1]
+    Yields=[0]*len(MYields)
+    while np.linalg.norm(d,2)>epsilon:
+            for i in range(len(MYields)):
+                
+                    Jacob[i][0]=(B(t,Maturity[i],gamma)-(Maturity[i]))/((Maturity[i]-t)*gamma)
             
+                    Jacob[i][1]=-((B(t,Maturity[i],gamma)-Maturity[i]+t)/(2*gamma) + 0.25*B(t,Maturity[i],gamma)**2)*1/((Maturity[i]-t)*gamma)
+                
+                    Jacob[i][2]=1/(Maturity[i]-t) * (Aderivative(gamma, np.sqrt(sigmasquared), etha, t, Maturity[i]) - r0*Bderivative(gamma,t, Maturity[i]))
+        
+        
+                    Yields[i]=-(A(t,Maturity[i],gamma,etha,np.sqrt(sigmasquared))-r0*B(t,Maturity[i],gamma))/(Maturity[i]-t)
+                    Res[i]=MYields[i]-Yields[i]
+        
+        
+            d=-np.dot(np.linalg.inv(np.dot(Jacob.T,Jacob)+lamb*np.identity(3)),np.dot(Jacob.T,Res))
+            etha+=d[0]
+            sigmasquared+=d[1]
+            gamma+=d[2]
+    print("Parameters for t=0 are", [etha,sigmasquared,gamma])
     
-    for i in range(step):
-        Droite[i]=Vect[0]*Data1[i]+Vect[1]
-        Res3[i]=y[i]-Droite[i]
+    plt.scatter(Maturity,MYields,c='r',label='Market Yields')
+    plt.plot(Maturity,Yields,c='b',label='Vasicek Yields')
+    plt.title('Market Yields and Theoretical Yields with Calibrated Model at t=%d' %(t))
+    plt.legend()
+    plt.show()
+
+# =============================================================================
+# Part 3: Calibration to historical dates and linear regression to find the best predictive linear pattern of interest rates
+# =============================================================================
+
+def interestrate(r,etha,gamma,sigma,T,step,a,b):
+    lamb=0.01
+    dt=T/step
+    Rate=[0]*step
+    Rate[0]=r
+    for i in range(step-1):
+        Rate[i+1]=Rate[i]*np.exp(-gamma*dt) + etha/gamma * (1-np.exp(-gamma*dt)) + np.sqrt(sigma**2 * (1-np.exp(-2*gamma*dt))/2*gamma)*np.random.normal()
     
-    for j in range(2):
-        d3=-np.dot(np.linalg.inv(np.dot(Jacob3.T,Jacob3)+lamb*np.identity(2)),np.dot(Jacob3.T,Res3))
-        Vect[j]=Vect[j]+d3[j]
-print('Our parameters a and b are ', Vect)
-yapproach=[i*Vect[0]+Vect[1] for i in Data1]
-Error=[a_i - b_i for a_i, b_i in zip(y, yapproach)]
-plt.scatter(x[:step],y, label="interest rate data")
-plt.plot(x[:step],yapproach,c='g', label="linear approximation")
-plt.title("Linear regression to find the line which fits the interest rate prediction the best y(r_i)=r_(i+1)")
-plt.legend()
-plt.show()
-print("Variance is equal to ", np.var(Error))
-"""x=x[:step]
-x=np.array(x)
-y=np.array(y)
-x=x.reshape(x.shape[0],1)
-y=y.reshape(y.shape[0],1)
-X=np.hstack((x,np.ones(x.shape)))
-theta=np.linalg.inv(np.dot(X.T,X)).dot(np.dot(X.T,y))"""
-dt=5/step
-TheoreticalGamma=-np.log(Vect[0])/dt
-TheoreticalEtha=TheoreticalGamma*(Vect[1])/(1-Vect[0])
-TheoreticalSigma=np.std(Error)*np.sqrt(-2*np.log(Vect[0])/(dt*(1-Vect[0]**2)))
-TheoreticalVector=[TheoreticalEtha,TheoreticalGamma,TheoreticalSigma]
+    Jacob=np.zeros((step,2))
+    d=[0.1,0.1]
+    Res=[0]*step
+    Epsilon=10**(-9)
+    count=0
+    a_theory = np.exp(-gamma * dt)
+    b_theory = etha / gamma * (1 - np.exp(-gamma * dt))
+    while np.linalg.norm(d)>Epsilon:
+       
+            for i in range(step-1):
+                
+               Jacob[i][0]=-Rate[i]
+                
+               Jacob[i][1]=-1
+                
+               Res[i]=Rate[i+1]-a*Rate[i]-b
+        
+        
+            d=-np.dot(np.linalg.inv(np.dot(Jacob.T,Jacob)+lamb*np.identity(2)),np.dot(Jacob.T,Res))
+            a+=d[0]
+            b+=d[1]
+            
+            count=count+1
+        
+    print('Our parameters a and b are ', [a,b])
+    yapproach=[i*a + b for i in Rate[:step-1]]
+    Error=[a_i - b_i for a_i, b_i in zip(Rate[1:step], yapproach)]
+    Var=0
+    for i in range(step-1):
+        Var+=(Rate[i+1]-a*Rate[i]-b)**2
+    
+    Variance=Var/step
+    plt.scatter(Rate[:step-1],Rate[1:step], label="interest rate data")
+    plt.plot(Rate[:step-1],yapproach,c='g', label="linear approximation")
+    plt.plot(Rate[:step-1],a_theory*np.array(Rate[:step-1])+b_theory,c='r', label="True line")
+    plt.title("Linear regression to find the line which fits the interest rate prediction the best y(r_i)=r_(i+1)")
+    plt.legend()
+    plt.show()
+    print("Variance is equal to ", np.var(Error))
+    """x=x[:step]
+    x=np.array(x)
+    y=np.array(y)
+    x=x.reshape(x.shape[0],1)
+    y=y.reshape(y.shape[0],1)
+    X=np.hstack((x,np.ones(x.shape)))
+    theta=np.linalg.inv(np.dot(X.T,X)).dot(np.dot(X.T,y))"""
+    TheoreticalGamma=-np.log(a)/dt
+    TheoreticalEtha=TheoreticalGamma*(b)/(1-a)
+    TheoreticalSigma=np.std(Error)*np.sqrt(-2*np.log(a)/(dt*(1-a**2)))
+    TheoreticalVector=[TheoreticalEtha,TheoreticalGamma,TheoreticalSigma]
+    RealGamma=-np.log(a_theory)/dt
+    RealEtha=RealGamma*(b_theory)/(1-a_theory)
+    RealSigma=np.sqrt(Variance)*np.sqrt(-2*np.log(a_theory)/(dt*(1-a_theory**2)))
+    RealVector=[RealEtha,RealGamma,RealSigma]
+    return TheoreticalVector,RealVector,Jacob
