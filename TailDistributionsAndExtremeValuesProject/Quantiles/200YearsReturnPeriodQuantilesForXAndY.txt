@@ -1,0 +1,3 @@
+Model X 200 years return period  values for Gaussian,GEV, and GPD are [31303.87106593359, 122183.07687517145, 96418.47846463445]
+
+Model Y 200 years return period  for Gaussian,GEV, and GPD are [5245.121905292832, 5240.68383350606, 5149.44883554255]
