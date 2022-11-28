@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from pyextremes import plot_mean_residual_life
 import math
+from scipy.stats import kstest
 # =============================================================================
 #Importing files
 # =============================================================================
@@ -74,12 +75,15 @@ YaxisGaussian=np.zeros(len(Xaxis))
 YaxisGev=np.zeros(len(Xaxis)) 
 YaxisGPD=np.zeros(len(Xaxis))   
 dataGaussian=stats.norm.rvs(*fit2,size=len(data)) #we generate len(data) number of values from our distributions and plot their respective probabilities
-dataGPD=stats.genpareto.rvs(*fit3,size=len(data))
-dataGev=stats.genextreme.rvs(*fit1,size=len(data)) 
+dataGPD=stats.genpareto.rvs(*fit3,size=1000)
+dataGev=stats.genextreme.rvs(*fit1,size=1000) 
+YaxisEmpiricalDistributionYear=np.zeros(len(Xaxis))
 for i in range(len(Xaxis)):
-    YaxisEmpiricalDistribution[i]=empirical(data,Xaxis[i])*24
-    YaxisGaussian[i]=empirical(dataGaussian,Xaxis[i])*24
-    YaxisGev[i]=empirical(dataGev,Xaxis[i])*2
+    YaxisEmpiricalDistribution[i]=empirical(data,Xaxis[i])
+    YaxisEmpiricalDistributionYear[i]=empirical(np.array(data1),Xaxis[i])
+    YaxisEmpiricalDistributionYear[i]=empirical(datapar,Xaxis[i])
+    YaxisGaussian[i]=empirical(dataGaussian,Xaxis[i])
+    YaxisGev[i]=empirical(dataGev,Xaxis[i])
     YaxisGPD[i]=empirical(dataGPD,Xaxis[i])
 
 plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Disitribution')
@@ -91,12 +95,12 @@ plt.plot(Xaxis,YaxisGaussian,c='b',label='Scaled Gaussian Sample')
 plt.legend()
 plt.title("Empirical distribution P(X>u)=1-P(X<u) Gaussian and Original Data ")
 plt.show()
-plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Sample')
+plt.plot(Xaxis,YaxisEmpiricalDistributionYear,c='g',label='Original Data Sample')
 plt.plot(Xaxis,YaxisGPD,c='r',label='GPD Data Sample')
 plt.title("Empirical distribution P(X>u)=1-P(X<u) GPD and Original Data")
 plt.legend()
 plt.show()
-plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Sample')
+plt.plot(Xaxis,YaxisEmpiricalDistributionYear,c='g',label='Original Data Sample')
 plt.plot(Xaxis,YaxisGev,c='y',label='GEV Data Sample')
 plt.title("Empirical distribution P(X>u)=1-P(X<u) GEV and Original Data")
 plt.legend()
@@ -114,27 +118,13 @@ def leastsquares(Dist): #Function to find the best fitting model
     for i in range(len(Xaxis)):
         Error+=(YaxisEmpiricalDistribution[i]-Dist[i])**2
     return Error/len(Xaxis)
-#The next part is just to avoid bias from data sample, we simulate one hundred times each data distribution and take its mean, this way we are (slightly) more accurate when it comes to validating our model
-Nmc=100  
-SSEVector=np.zeros((Nmc,3))
-c0=0
-c1=0
-c2=0
-for i in range(Nmc):
-        dataGaussian=stats.norm.rvs(*fit2,size=len(data)) 
-        dataGPD=stats.genpareto.rvs(*fit3,size=len(data))
-        dataGev=stats.genextreme.rvs(*fit1,size=len(data))
-        for j in range(len(Xaxis)):
-            YaxisGaussian[j]=empirical(dataGaussian,Xaxis[j])*12
-            YaxisGev[j]=empirical(dataGev,Xaxis[j])
-            YaxisGPD[j]=empirical(dataGPD,Xaxis[j])
-            
-        SSEVector[i]=[leastsquares(YaxisGaussian),leastsquares(YaxisGPD),leastsquares(YaxisGev)]
-        c0+=SSEVector[i][0]
-        c1+=SSEVector[i][1]
-        c2+=SSEVector[i][2]
-NMCMean=[c0/Nmc,c1/Nmc,c2/Nmc] #Mean over all our simulations 
-#We will choose the Gaussian model, although this step was unnecessary here, because when it comes to the tail distribution, the tail is the same for all three of them starting from higher values
+#Kolmogorov-Smirnoff
+x=kstest(data,stats.norm.cdf,args=fit2)
+x2=kstest(datapar,stats.genpareto.cdf,args=fit3)
+print("Kstest for gaussian",x) #P value is pretty high we cannot reject the gaussian distribution, also from the p value from the GPD, the tail seems to be more gaussian than anything else
+print("Kstest for GPD",x2)  
+
+#We select the Gaussian model
 # =============================================================================
 #  Quantiles 
 # =============================================================================

@@ -3,17 +3,22 @@ import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
 from scipy import stats
+from scipy.optimize import root_scalar
 import math
 from datetime import datetime
 from pyextremes import plot_mean_residual_life
-
-
+from scipy.stats import kstest
+import copulae
+import random
+from statsmodels.distributions.copula.api import (
+    CopulaDistribution, GumbelCopula, IndependenceCopula)
 # =============================================================================
 # Importing our data
 # =============================================================================
 df=pd.read_excel('h:\Downloads\Données.xlsx')
 data=df.loc[:,'X']
-datay=df.loc[:,'Y']
+
+datay=df[["date", "Y"]].set_index("date").resample("Y").max()
 data1 = df[["date", "X"]]
 data1 = data1.set_index("date")
 data1=data1.resample("Y").max() #Block maxima (by year) for generalized extreme value fitting
@@ -28,7 +33,7 @@ def Excess(u):
         if data[i]>u:
             count+=1
     return Max.sum()/count
-ParetoSample=[5000*i for i in range(1,9)]
+ParetoSample=[1000*i for i in range(1,35)]
 ExcessPlot=[0]*len(ParetoSample)
 for i in range(len(ParetoSample)):
     ExcessPlot[i]=Excess(ParetoSample[i])
@@ -43,14 +48,14 @@ plt.show()
 # =============================================================================
 # Start of simulation
 # =============================================================================
-datapar=[x for x in data if x>=20000] #Around 2 years data-clustering
+datapar=[x for x in data if x>=16000] #Around 1 years data-clustering
 v=np.ceil(np.log2(len(data1))) + 1 #This is called Sturge's rule, this formula is used to calculate the adequate number of bins to visualize your data's distribution
 v2=np.ceil(np.log2(len(data))) + 1
 v3=np.ceil(np.log2(len(datapar))) + 1
 y,x=np.histogram(data1,bins=int(v),density=True) #"clustering" our data for the plot
 y2,x2=np.histogram(data,bins=int(v2),density=True)
 y3,x3=np.histogram(datapar,bins=int(v3),density=True)
-plt.hist(data1, bins=int(v), density=True)
+plt.hist(data, bins=int(v2), density=True)
 
 plt.title("Histogram")
 plt.show()
@@ -61,9 +66,9 @@ x3 = (x3 + np.roll(x3, -1))[:-1] / 2.0 #This takes the mid point of every "bin" 
 # Fitting our data and plotting the PDFs
 # =============================================================================
 fit1=stats.genextreme.fit(data1,loc=0) #The fit method finds the optimal parameters for your data fitting a chosen probability distribution
-print(fit1)
 fit2=stats.norm.fit(data)
 fit3=stats.genpareto.fit(datapar,loc=0)
+fitY=stats.genpareto.fit(datay,loc=0)
 pdf=stats.genextreme.pdf(x,*fit1)
 pdf2=stats.norm.pdf(x2,*fit2)
 pdf3=stats.genpareto.pdf(x3,*fit3)
@@ -98,16 +103,20 @@ def empirical(x,u):
 #In order to compare with our Gaussian/GEV/GPD distributions we will simulate values from those and compare with our empirical distribution
 Xaxis=np.linspace(20000,90000,50)
 YaxisEmpiricalDistribution=np.zeros(len(Xaxis))  
+YaxisEmpiricalDistributionYearly=np.zeros(len(Xaxis)) 
+YaxisEmpiricalDistribution2Years=np.zeros(len(Xaxis)) 
 YaxisGaussian=np.zeros(len(Xaxis)) 
 YaxisGev=np.zeros(len(Xaxis)) 
 YaxisGPD=np.zeros(len(Xaxis))   
 dataGaussian=stats.norm.rvs(*fit2,size=len(data)) #we generate len(data) number of values from our distributions and plot their respective probabilities
-dataGPD=stats.genpareto.rvs(*fit3,size=len(data))
-dataGev=stats.genextreme.rvs(*fit1,size=len(data)) 
+dataGPD=stats.genpareto.rvs(*fit3,1000)
+dataGev=stats.genextreme.rvs(*fit1,1000) 
 for i in range(len(Xaxis)):
-    YaxisEmpiricalDistribution[i]=empirical(data,Xaxis[i])*24
-    YaxisGaussian[i]=empirical(dataGaussian,Xaxis[i])*24
-    YaxisGev[i]=empirical(dataGev,Xaxis[i])*2
+    YaxisEmpiricalDistribution[i]=empirical(data,Xaxis[i])
+    YaxisEmpiricalDistributionYearly[i]=empirical(np.array(data1),Xaxis[i])
+    YaxisEmpiricalDistribution2Years[i]=empirical(datapar,Xaxis[i])
+    YaxisGaussian[i]=empirical(dataGaussian,Xaxis[i])
+    YaxisGev[i]=empirical(dataGev,Xaxis[i])
     YaxisGPD[i]=empirical(dataGPD,Xaxis[i])
 
 plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Disitribution')
@@ -117,59 +126,73 @@ plt.show()
 plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Sample')
 plt.plot(Xaxis,YaxisGaussian,c='b',label='Scaled Gaussian Sample')
 plt.legend()
-plt.title("Empirical distribution P(X>u)=1-P(X<u) Gaussian and Original Data ")
+plt.title("Empirical distribution P(X>u)=1-P(X<u) Gaussian and original  ")
 plt.show()
-plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Sample')
+plt.plot(Xaxis,YaxisEmpiricalDistribution2Years,c='g',label='Original Data Sample')
 plt.plot(Xaxis,YaxisGPD,c='r',label='GPD Data Sample')
-plt.title("Empirical distribution P(X>u)=1-P(X<u) GPD and Original Data")
+plt.title("Empirical distribution P(X>u)=1-P(X<u) GPD and original ")
 plt.legend()
 plt.show()
-plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Sample')
+plt.plot(Xaxis,YaxisEmpiricalDistributionYearly,c='g',label='Original Data Sample')
 plt.plot(Xaxis,YaxisGev,c='y',label='GEV Data Sample')
-plt.title("Empirical distribution P(X>u)=1-P(X<u) GEV and Original Data")
-plt.legend()
-plt.show()
-plt.plot(Xaxis,YaxisEmpiricalDistribution,c='g',label='Original Data Sample')
-plt.plot(Xaxis,YaxisGaussian,c='b',label='Gaussian')
-plt.plot(Xaxis,YaxisGPD,c='r',label='GPD')
-plt.plot(Xaxis,YaxisGev,c='y',label='GEV')
-plt.title("All distributions plotted together")
+plt.title("Empirical distribution P(X>u)=1-P(X<u) GEV  and original")
 plt.legend()
 plt.show()
 #Least-squares
-def leastsquares(Dist): #Function to find the best fitting model
+def leastsquares(EmpiricalDist,Dist): #Function to find the best fitting model
     Error=0
     for i in range(len(Xaxis)):
-        Error+=(YaxisEmpiricalDistribution[i]-Dist[i])**2
+        Error+=(EmpiricalDist[i]-Dist[i])**2
     return Error/len(Xaxis)
-#The next part is just to avoid bias from data sample, we simulate one hundred times each data distribution and take its mean, this way we are (slightly) more accurate when it comes to validating our model
-Nmc=100  
-SSEVector=np.zeros((Nmc,3))
-c0=0
-c1=0
-c2=0
-for i in range(Nmc):
-        dataGaussian=stats.norm.rvs(*fit2,size=len(data)) 
-        dataGPD=stats.genpareto.rvs(*fit3,size=len(data))
-        dataGev=stats.genextreme.rvs(*fit1,size=len(data))
-        for j in range(len(Xaxis)):
-            YaxisGaussian[j]=empirical(dataGaussian,Xaxis[j])*24
-            YaxisGev[j]=empirical(dataGev,Xaxis[j])*2
-            YaxisGPD[j]=empirical(dataGPD,Xaxis[j])
-            
-        SSEVector[i]=[leastsquares(YaxisGaussian),leastsquares(YaxisGPD),leastsquares(YaxisGev)]
-        c0+=SSEVector[i][0]
-        c1+=SSEVector[i][1]
-        c2+=SSEVector[i][2]
-NMCMean=[c0/Nmc,c1/Nmc,c2/Nmc] #Mean over all our simulations 
 
-#The selected model based on this method is GPD, although this is subjective and for tail distribution GEV fits as good, we couldve chosen it as well, it is made clear though that the gaussian distribution is ruled out. In Fact I would like to add GPD and GEV are petty much equivalent for events >30000 with GEV having a slightly fatter tail, so if we want to be sure about not losing money, we would pick the GEV model for estimating return periods (because it's safer)
+#quantiles
+def Quantile(alpha,data):
+    Sortedata=np.sort(data)
+    IndexData=math.floor(len(data)*alpha)
+    return Sortedata[IndexData]
+#Kolmogorov-Smirnoff
+x=kstest(data,stats.norm.cdf,args=fit2)
+x3=kstest(data1,stats.genextreme.cdf,args=fit1)
+x2=kstest(datapar,stats.genpareto.cdf,args=fit3)
+print("Kstest for gaussian",x) #We reject the null hypothesis since the p value is this small, our data does not follow a normal distribution
+print("Kstest for GPD",x2)  
+print("Kstest for GEV",x3)  
+#Experimental code
+ReturnPeriods=[12*i for i in range(2,10)]
+Alphas=[1-1/x for x in ReturnPeriods]
+Alphas2=[1-12/x for x in ReturnPeriods]
+Alphas3=[1-12/x for x in ReturnPeriods]
+
+Quantiledata=np.zeros(len(Alphas))
+QuantileGEV=np.zeros(len(Alphas))
+QuantileGPD =np.zeros(len(Alphas))
+QuantileGauss=np.zeros(len(Alphas))
+
+for i in range(len(Alphas)):
+    Quantiledata[i]=Quantile(Alphas[i],data)
+    QuantileGauss[i]=Quantile(Alphas[i],stats.norm.rvs(*fit2,100000))
+    QuantileGEV[i]=Quantile(Alphas2[i],stats.genextreme.rvs(*fit1,100000))
+    QuantileGPD[i]=Quantile(Alphas3[i],stats.genpareto.rvs(*fit3,100000))
+    
+plt.scatter(Quantiledata,QuantileGauss)
+plt.plot(Quantiledata,Quantiledata)
+plt.title("Q-Q plot Gauss and Original Data")
+plt.show()
+plt.scatter(Quantiledata,QuantileGEV)
+plt.plot(Quantiledata,Quantiledata)
+plt.title("Q-Q plot GEV Original Data")
+plt.show()
+plt.scatter(Quantiledata,QuantileGPD)
+plt.plot(Quantiledata,Quantiledata)
+plt.title("Q-Q plot GPD Original Data")
+plt.show()
+#We select GPD based on the p-value and the Q-Q plot.
 # =============================================================================
 #  Quantiles 
 # =============================================================================
 #Actual Data
 SortedData=np.sort(data1)
-alphapareto=0.99
+alphapareto=0.995
 alpha=0.995
 alpha2=0.9995
 IndexData=math.floor(len(data1)*alpha)
@@ -191,3 +214,65 @@ print("Model X 200 years return period  values for Gaussian,GEV, and GPD are", Q
 # =============================================================================
 # X and Y Model dependency (A faire :)) 
 # =============================================================================
+
+Obs = copulae.pseudo_obs(df.set_index("date").resample("Y").max())
+emp_cop = copulae.EmpiricalCopula(Obs, smoothing="beta")
+data = emp_cop.data
+plt.scatter(data['X'], data['Y'])
+plt.xlabel(" X")
+plt.ylabel(" Y")
+plt.title("Copule de X et Y")
+plt.legend()
+plt.show()
+
+Obs = copulae.pseudo_obs(df[["X","Y"]])
+_,ndim=data.shape
+C_cop=copulae.ClaytonCopula(dim=ndim)
+G_cop=copulae.GaussianCopula(dim=ndim)
+F_cop=copulae.FrankCopula(dim=ndim)
+K_cop=copulae.GumbelCopula(dim=ndim)
+T_cop=copulae.StudentCopula(dim=ndim)
+x1=C_cop.fit(Obs)
+x2=G_cop.fit(Obs)
+x3=F_cop.fit(Obs)
+x4=K_cop.fit(Obs)
+x5=T_cop.fit(Obs)
+XSample=stats.genpareto.rvs(*fit3,size=1) #yearly max
+u=stats.genpareto.cdf(XSample,*fit3)
+t1=random.uniform(0, 1)
+t2=random.uniform(0, 1)
+theta=2.966099153905645
+def GCopula(x):
+    XSample=stats.genpareto.rvs(*fit3,size=1) #yearly max
+    u=stats.genpareto.cdf(XSample,*fit3)
+    t1=random.uniform(0, 1)
+    theta=2.966099153905645
+    return np.exp(-((-np.log(u))**(theta) +(-np.log(x))**(theta))**(1/theta))-t1
+def Generator(t):
+    return (-np.log(t))**theta
+def DerivativeGenerator(t):
+    return (theta*(-np.log(t))**theta)/(t*np.log(t))
+def K(t):
+    return (t-Generator(t)/DerivativeGenerator(t))-t2
+
+"""ProbabilityY=np.zeros(100)
+
+while np.all(ProbabilityY = 0):
+    try:
+        ProbabilityY[i]=root_scalar(GCopula,bracket=[0,1]).root
+    except:
+        pass """
+copula = GumbelCopula(theta=theta)
+_ = copula.plot_pdf()  # returns a matplotlib figure
+plt.title('Gumbel Copula for theta=2.966')
+plt.show()
+Sample=copula.rvs(10000)
+QuantileX=np.zeros(10000)
+QuantileY=np.zeros(10000)
+fitY=(-0.2115559548242755, 3819.72758293294, 415.2103277015068)
+for i in range(10000):
+    QuantileX[i]=np.quantile(stats.genpareto.rvs(*fit3,size=1000000),Sample[i,0])
+    QuantileY[i]=np.quantile(stats.genpareto.rvs(*fitY,size=1000000),Sample[i,1])
+
+XYCombined=np.add(QuantileX,QuantileY)
+print("Combined 200 years return is", np.quantile(XYCombined,0.995))
