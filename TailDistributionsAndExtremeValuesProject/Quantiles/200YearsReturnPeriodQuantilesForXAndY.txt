@@ -1,3 +1,5 @@
 Model X 200 years return period  values for Gaussian,GEV, and GPD are [31458.229974645787, 122038.00386936408, 89737.92842751024]
 
 Model Y 200 years return period  for Gaussian,GEV, and GPD are [5245.121905292832, 5240.68383350606, 5149.44883554255]
+
+Combined 200 years return is 95977.9668448364
