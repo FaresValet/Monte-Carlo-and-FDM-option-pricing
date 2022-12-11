@@ -215,24 +215,24 @@ print("Model X 200 years return period  values for Gaussian,GEV, and GPD are", Q
 # X and Y Model dependency (A faire :)) 
 # =============================================================================
 
-Obs = copulae.pseudo_obs(df.set_index("date").resample("Y").max())
+Obs = copulae.pseudo_obs(df.set_index("date").resample("Y").max()) #Observations pour générer le nuage de copules
 emp_cop = copulae.EmpiricalCopula(Obs, smoothing="beta")
 data = emp_cop.data
 plt.scatter(data['X'], data['Y'])
 plt.xlabel(" X")
 plt.ylabel(" Y")
-plt.title("Copule de X et Y")
+plt.title("Copule de X et Y") #rangs de Y en fonction des rangs de X
 plt.legend()
 plt.show()
 
-Obs = copulae.pseudo_obs(df[["X","Y"]])
+Obs = copulae.pseudo_obs(df.set_index("date").resample("Y").max())
 _,ndim=data.shape
-C_cop=copulae.ClaytonCopula(dim=ndim)
+C_cop=copulae.ClaytonCopula(dim=ndim)  #Je definis les copules par rapport auxquelles on va tester nos observations
 G_cop=copulae.GaussianCopula(dim=ndim)
 F_cop=copulae.FrankCopula(dim=ndim)
 K_cop=copulae.GumbelCopula(dim=ndim)
 T_cop=copulae.StudentCopula(dim=ndim)
-x1=C_cop.fit(Obs)
+x1=C_cop.fit(Obs) #Ici on "fit" nos copules aux observations J'utilise ensuite dans la console la methode log_lik du module copulae afin de trouver celle avec le maximum de vraisemblance le plus élevé et on trouve Gumbel pour un paramètre thêta=2,9 ..
 x2=G_cop.fit(Obs)
 x3=F_cop.fit(Obs)
 x4=K_cop.fit(Obs)
@@ -242,7 +242,7 @@ u=stats.genpareto.cdf(XSample,*fit3)
 t1=random.uniform(0, 1)
 t2=random.uniform(0, 1)
 theta=2.966099153905645
-def GCopula(x):
+def GCopula(x): #ne sert à rien, j'explorais juste un autre moyen afin de trouver le retour combiné
     XSample=stats.genpareto.rvs(*fit3,size=1) #yearly max
     u=stats.genpareto.cdf(XSample,*fit3)
     t1=random.uniform(0, 1)
@@ -255,24 +255,19 @@ def DerivativeGenerator(t):
 def K(t):
     return (t-Generator(t)/DerivativeGenerator(t))-t2
 
-"""ProbabilityY=np.zeros(100)
 
-while np.all(ProbabilityY = 0):
-    try:
-        ProbabilityY[i]=root_scalar(GCopula,bracket=[0,1]).root
-    except:
-        pass """
-copula = GumbelCopula(theta=theta)
+copula = GumbelCopula(theta=2.966099153905645) #copule que l'on retient pour simuler la dépendance X et Y
 _ = copula.plot_pdf()  # returns a matplotlib figure
 plt.title('Gumbel Copula for theta=2.966')
 plt.show()
-Sample=copula.rvs(10000)
+Sample=copula.rvs(10000) #Génère 10000 couples de notre copule
 QuantileX=np.zeros(10000)
 QuantileY=np.zeros(10000)
-fitY=(-0.2115559548242755, 3819.72758293294, 415.2103277015068)
+fitY=(-0.2115559548242755, 3819.72758293294, 415.2103277015068) #◙Paramètres de Y (trouvée dans le code de Y)
 for i in range(10000):
-    QuantileX[i]=np.quantile(stats.genpareto.rvs(*fit3,size=1000000),Sample[i,0])
-    QuantileY[i]=np.quantile(stats.genpareto.rvs(*fitY,size=1000000),Sample[i,1])
-
-XYCombined=np.add(QuantileX,QuantileY)
+    QuantileX[i]=np.quantile(stats.genpareto.rvs(*fit3,size=100000),Sample[i,0])
+    QuantileY[i]=np.quantile(stats.genpareto.rvs(*fitY,size=100000),Sample[i,1])
+#La boucle en haut génère des réalisations X,Y qui tiennent compte de la structure de dépendance
+XYCombined=np.add(QuantileX,QuantileY) #Maintenant que l'on tient compte de la structure de dépendance on peut ajouter les quantiles
+Quantile=np.quantile(stats.genpareto.rvs(*fit3,size=100000),0.995)
 print("Combined 200 years return is", np.quantile(XYCombined,0.995))
