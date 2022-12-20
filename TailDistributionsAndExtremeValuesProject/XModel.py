@@ -157,6 +157,19 @@ x2=kstest(datapar,stats.genpareto.cdf,args=fit3)
 print("Kstest for gaussian",x) #We reject the null hypothesis since the p value is this small, our data does not follow a normal distribution
 print("Kstest for GPD",x2)  
 print("Kstest for GEV",x3)  
+def BIC(x, x_theo, parmater):
+    n = len(x)
+    residual = np.subtract(x_theo, x)
+    SSE = np.sum(np.power(residual, 2))
+    return n * np.log(SSE / n) + parmater * np.log(n)
+
+
+def AIC(x, x_theo, parmater):
+    n = len(x)
+    residual = np.subtract(x_theo, x)
+    rss = np.sum(np.power(residual, 2))
+    return n * np.log(rss / n) + 2 * parmater
+
 #Experimental code
 ReturnPeriods=[12*i for i in range(2,10)]
 Alphas=[1-1/x for x in ReturnPeriods]
@@ -191,31 +204,40 @@ plt.show()
 #  Quantiles 
 # =============================================================================
 #Actual Data
-SortedData=np.sort(data1)
-alphapareto=0.995
+SortedData=np.sort(df.loc[:,'X'])
 alpha=0.995
-alpha2=0.9995
-IndexData=math.floor(len(data1)*alpha)
+alpha2=1-1/(200*12)
+alphaquantile=1-(12/200)
+IndexData=math.floor(len(df.loc[:,'X'])*alpha)
 QuantileData=SortedData[IndexData]
+print("Quantile empirique est", QuantileData)
 #Gaussian law
 SortedGaussian=np.sort(stats.norm.rvs(*fit2,size=1000000))
 IndexGauss=math.floor(1000000*alpha2)
 QuantileGaussian=SortedGaussian[IndexGauss]
 #GPD 
 SortedGPD=np.sort(stats.genpareto.rvs(*fit3,size=100000))
-IndexGPD=math.floor(100000*alphapareto)
-QuantilePareto=SortedGPD[IndexGPD]
+IndexGPD=math.floor(100000*alpha)
+ReturnPareto=SortedGPD[IndexGPD]
+IndexQuantileGPD=math.floor(100000*alphaquantile)
+QuantilePareto=SortedGPD[IndexQuantileGPD]
+print("Quantile 99.5 GPD est", QuantilePareto)
 #GEV
 SortedGEV=np.sort(stats.genextreme.rvs(*fit1,size=100000))
 IndexGEV=math.floor(100000*alpha)
-QuantileGEV=SortedGEV[IndexGEV] 
-QuantileVector=[QuantileGaussian,QuantileGEV,QuantilePareto]
-print("Model X 200 years return period  values for Gaussian,GEV, and GPD are", QuantileVector)
+IndexQuantileGEV=math.floor(100000*alphaquantile)
+ReturnGEV=SortedGEV[IndexGEV]
+QuantileGEV=SortedGEV[IndexQuantileGEV]
+print("Quantile 99.5 GEV est", QuantileGEV)
+QuantileVector=[QuantileData,QuantileGEV,QuantilePareto]
+print("Model X 99.5 Quantiles (Monthly)  values for OriginalData,GEV, and GPD are", QuantileVector)
+ReturnVector=[QuantileGaussian,ReturnGEV,ReturnPareto]
+print("Model X 200 years return period  values for Gaussian,GEV, and GPD are", ReturnVector)
 # =============================================================================
 # X and Y Model dependency (A faire :)) 
 # =============================================================================
 
-Obs = copulae.pseudo_obs(df.set_index("date").resample("Y").max()) #Observations pour générer le nuage de copules
+Obs = copulae.pseudo_obs(df.set_index("date")) #Observations pour générer le nuage de copules
 emp_cop = copulae.EmpiricalCopula(Obs, smoothing="beta")
 data = emp_cop.data
 plt.scatter(data['X'], data['Y'])
@@ -260,7 +282,7 @@ copula = GumbelCopula(theta=2.966099153905645) #copule que l'on retient pour sim
 _ = copula.plot_pdf()  # returns a matplotlib figure
 plt.title('Gumbel Copula for theta=2.966')
 plt.show()
-Sample=copula.rvs(10000) #Génère 10000 couples de notre copule
+"""Sample=copula.rvs(10000) #Génère 10000 couples de notre copule
 QuantileX=np.zeros(10000)
 QuantileY=np.zeros(10000)
 fitY=(-0.2115559548242755, 3819.72758293294, 415.2103277015068) #◙Paramètres de Y (trouvée dans le code de Y)
@@ -270,4 +292,4 @@ for i in range(10000):
 #La boucle en haut génère des réalisations X,Y qui tiennent compte de la structure de dépendance
 XYCombined=np.add(QuantileX,QuantileY) #Maintenant que l'on tient compte de la structure de dépendance on peut ajouter les quantiles
 Quantile=np.quantile(stats.genpareto.rvs(*fit3,size=100000),0.995)
-print("Combined 200 years return is", np.quantile(XYCombined,0.995))
+print("Combined 200 years return is", np.quantile(XYCombined,0.995))"""
