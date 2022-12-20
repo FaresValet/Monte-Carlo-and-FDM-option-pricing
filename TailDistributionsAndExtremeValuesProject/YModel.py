@@ -123,29 +123,66 @@ x=kstest(data,stats.norm.cdf,args=fit2)
 x2=kstest(datapar,stats.genpareto.cdf,args=fit3)
 print("Kstest for gaussian",x) #P value is pretty high we cannot reject the gaussian distribution, also from the p value from the GPD, the tail seems to be more gaussian than anything else
 print("Kstest for GPD",x2)  
+def Quantile(alpha,data):
+    Sortedata=np.sort(data)
+    IndexData=math.floor(len(data)*alpha)
+    return Sortedata[IndexData]
+ReturnPeriods=[12*i for i in range(2,11)]
+Alphas=[1-1/x for x in ReturnPeriods]
+Alphas2=[1-12/x for x in ReturnPeriods]
+Alphas3=[1-12/x for x in ReturnPeriods]
 
+Quantiledata=np.zeros(len(Alphas))
+QuantileGEV=np.zeros(len(Alphas))
+QuantileGPD =np.zeros(len(Alphas))
+QuantileGauss=np.zeros(len(Alphas))
+
+for i in range(len(Alphas)):
+    Quantiledata[i]=Quantile(Alphas[i],data)
+    QuantileGauss[i]=Quantile(Alphas[i],stats.norm.rvs(*fit2,100000))
+    QuantileGEV[i]=Quantile(Alphas2[i],stats.genextreme.rvs(*fit1,100000))
+    QuantileGPD[i]=Quantile(Alphas3[i],stats.genpareto.rvs(*fit3,100000))
+    
+plt.scatter(Quantiledata,QuantileGauss)
+plt.plot(Quantiledata,Quantiledata)
+plt.title("Q-Q plot Gauss and Original Data")
+plt.show()
+plt.scatter(Quantiledata,QuantileGEV)
+plt.plot(Quantiledata,Quantiledata)
+plt.title("Q-Q plot GEV Original Data")
+plt.show()
+plt.scatter(Quantiledata,QuantileGPD)
+plt.plot(Quantiledata,Quantiledata)
+plt.title("Q-Q plot GPD Original Data")
+plt.show()
 #We select the Gaussian model
 # =============================================================================
 #  Quantiles 
 # =============================================================================
 #Actual Data
-SortedData=np.sort(data1)
-alphapareto=0.995
+SortedData=np.sort(df.loc[:,'Y'])
 alpha=0.995
-alpha2=0.9995
-IndexData=math.floor(len(data1)*alpha)
+alphagauss=1-1/(12*200)
+alpha2=1-(12/200)
+IndexData=math.floor(len(df.loc[:,'Y'])*alpha)
 QuantileData=SortedData[IndexData]
 #Gaussian law
 SortedGaussian=np.sort(stats.norm.rvs(*fit2,size=1000000))
-IndexGauss=math.floor(1000000*alpha2)
+IndexGauss=math.floor(1000000*alphagauss)
 QuantileGaussian=SortedGaussian[IndexGauss]
 #GPD 
 SortedGPD=np.sort(stats.genpareto.rvs(*fit3,size=100000))
-IndexGPD=math.floor(100000*alphapareto)
-QuantilePareto=SortedGPD[IndexGPD]
+IndexGPD=math.floor(100000*alpha)
+IndexGPDQuantile=math.floor(100000*alpha2)
+ReturnPareto=SortedGPD[IndexGPD]
+QuantilePareto=SortedGPD[IndexGPDQuantile]
 #GEV
 SortedGEV=np.sort(stats.genextreme.rvs(*fit1,size=100000))
 IndexGEV=math.floor(100000*alpha)
-QuantileGEV=SortedGEV[IndexGEV] 
-QuantileVector=[QuantileGaussian,QuantileGEV,QuantilePareto]
-print("Model Y 200 years return period  for Gaussian,GEV, and GPD are", QuantileVector)
+IndexGEVQuantile=math.floor(100000*alpha2)
+ReturnGEV=SortedGEV[IndexGEV]
+QuantileGEV=SortedGEV[IndexGEVQuantile]
+QuantileVector=[QuantileData,QuantileGEV,QuantilePareto]
+print("Model Y Quantile 99.5 OriginalData,GEV, and GPD are", QuantileVector)
+ReturnVector=[QuantileGaussian,ReturnGEV,ReturnPareto]
+print("Model Y 200 years return period  for Gaussian,GEV, and GPD are", ReturnVector)
