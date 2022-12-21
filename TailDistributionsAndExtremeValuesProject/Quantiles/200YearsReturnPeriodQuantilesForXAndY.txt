@@ -2,12 +2,13 @@ Quantile empirique est 40766.0705960765
 Quantile 99.5 GPD est 40718.900311131074
 Quantile 99.5 GEV est 42055.680264844006
 Model X 99.5 Quantiles (Monthly)  values for OriginalData,GEV, and GPD are [40766.0705960765, 42055.680264844006, 40718.900311131074]
-
+Quantile 99.5 de la loi normale (Gaussienne)  est 26492.00139618478
 
 
 Model X 200 years return period  values for Gaussian,GEV, and GPD are [31458.229974645787, 122038.00386936408, 89737.92842751024]
 
 Model Y Quantile 99.5 OriginalData,GEV, and GPD are [4742.2757424869915, 4687.2636422737205, 4701.0818067353985]
+Modèle Y Quantile 99.5 de la loi normale  est 4706.550417214899
 Model Y 200 years return period  for Gaussian,GEV, and GPD are [5245.121905292832, 5240.68383350606, 5149.44883554255]
 
 Combined 200 years return is 95977.9668448364
