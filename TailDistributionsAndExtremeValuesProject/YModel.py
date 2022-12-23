@@ -169,7 +169,10 @@ QuantileData=SortedData[IndexData]
 #Gaussian law
 SortedGaussian=np.sort(stats.norm.rvs(*fit2,size=1000000))
 IndexGauss=math.floor(1000000*alphagauss)
+IndexQuantileGauss=math.floor(1000000*alpha)
 QuantileGaussian=SortedGaussian[IndexGauss]
+QuantileGaussian99=SortedGaussian[IndexQuantileGauss]
+print("Modèle Y Quantile 99.5 de la loi normale  est", QuantileGaussian99)
 #GPD 
 SortedGPD=np.sort(stats.genpareto.rvs(*fit3,size=100000))
 IndexGPD=math.floor(100000*alpha)
