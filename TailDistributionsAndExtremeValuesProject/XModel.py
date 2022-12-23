@@ -237,8 +237,123 @@ print("Model X 99.5 Quantiles (Monthly)  values for OriginalData,GEV, and GPD ar
 ReturnVector=[QuantileGaussian,ReturnGEV,ReturnPareto]
 print("Model X 200 years return period  values for Gaussian,GEV, and GPD are", ReturnVector)
 # =============================================================================
-# X and Y Model dependency (A faire :)) 
+# X and Y Model dependency :
 # =============================================================================
+data = pd.read_excel("data\Base X Y.xlsx")
+X = data.iloc[:, 1]
+Y = data.iloc[:, 2]
+data3 = data[["X", "Y"]]
+
+_, ndim = data3.shape
+copulaGaussianCopula = copulae.GaussianCopula(dim=ndim)
+paramGaussianCopula = copulaGaussianCopula.fit(data3)
+
+copulaFrankCopula = copulae.FrankCopula(dim=ndim)
+paramFrankCopula = copulaFrankCopula.fit(data3)
+
+copulaClaytonCopula = copulae.ClaytonCopula(dim=ndim)
+paramClaytonCopula = copulaClaytonCopula.fit(data3)
+
+copulaStudentCopula = copulae.StudentCopula(dim=ndim)
+paramStudentCopula = copulaStudentCopula.fit(data3)
+
+copulaGumbelCopula = copulae.GumbelCopula(dim=ndim)
+paramGumbelCopula = copulaGumbelCopula.fit(data3)
+
+theta_Frank = paramFrankCopula.params
+theta_Gumbel = paramGumbelCopula.params
+theta_Clayton = paramClaytonCopula.params
+Degree_Freedom_student = paramStudentCopula.params[0]
+corr_student = paramStudentCopula.params[1][0]
+corr_matrix = paramGaussianCopula.params[0]
+
+print(" theta_Frank =", theta_Frank)
+print(" theta_Gumbel =", theta_Gumbel)
+print(" Degree_Freedom =", corr_student)
+print(" theta_Clayton =", theta_Clayton)
+print(" corr_matrix =", corr_matrix)
+
+means = [0.500000, 0.500000]
+a = 0.288434 ** 2
+b = 0.288434 * 0.288434 * corr_matrix
+cov_matrix = [[a, b], [b, a]]
+print(cov_matrix)
+copula = GumbelCopula(theta=theta_Gumbel)
+copula.plot_scatter()
+plt.title("Gumbel Copula "+str(theta_Gumbel))
+aic = AIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("AIC = ", aic)
+bic = BIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("BIC = ", bic)
+ks = Kolmogorov_Smirnov(np.array(df.values)[:,0], np.array(copula.rvs(nobs=598, random_state=None))[:,0])
+print("Kolmogorov_Smirnov = ", ks)
+plt.annotate("AIC = " + str(aic), xy=(0, 1))
+plt.annotate("BIC = " + str(bic), xy=(0, 0.95))
+plt.annotate("Ks = " + str(ks), xy=(0, 0.9))
+plt.savefig("Graph/Gumbel_Copula.png")
+plt.show()
+
+copula = ClaytonCopula(theta=theta_Clayton)
+copula.plot_scatter()
+plt.title("Clayton Copula " + str(theta_Clayton))
+aic = AIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("AIC = ", aic)
+bic = BIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("BIC = ", bic)
+ks = Kolmogorov_Smirnov(np.array(df.values)[:,0], np.array(copula.rvs(nobs=598, random_state=None))[:,0])
+print("Kolmogorov_Smirnov = ", ks)
+plt.annotate("AIC = " + str(aic), xy=(0, 1))
+plt.annotate("BIC = " + str(bic), xy=(0, 0.95))
+plt.annotate("Ks = " + str(ks), xy=(0, 0.9))
+plt.savefig("Graph/Clayton_Copula.png")
+plt.show()
+
+copula = FrankCopula(theta=theta_Frank)
+copula.plot_scatter()
+plt.title("Frank Copula " + str(theta_Frank))
+aic = AIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("AIC = ", aic)
+bic = BIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("BIC = ", bic)
+ks = Kolmogorov_Smirnov(np.array(df.values)[:,0], np.array(copula.rvs(nobs=598, random_state=None))[:,0])
+print("Kolmogorov_Smirnov = ", ks)
+plt.annotate("AIC = " + str(aic), xy=(0, 1))
+plt.annotate("BIC = " + str(bic), xy=(0, 0.95))
+plt.annotate("Ks = " + str(ks), xy=(0, 0.9))
+plt.savefig("Graph/Frank_Copula.png")
+plt.show()
+
+copula = StudentTCopula(df=Degree_Freedom_student , corr=corr_student)
+copula.plot_scatter()
+plt.title("Student Copula " + str(corr_student) +" df = "+str(Degree_Freedom_student))
+# print(np.array(copula.rvs(nobs=598, random_state=None)).shape)
+aic = AIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("AIC = ", aic)
+bic = BIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("BIC = ", bic)
+ks = Kolmogorov_Smirnov(np.array(df.values)[:,0], np.array(copula.rvs(nobs=598, random_state=None))[:,0])
+print("Kolmogorov_Smirnov = ", ks)
+plt.annotate("AIC = "+str(aic),xy=(0,1))
+plt.annotate("BIC = "+str(bic),xy=(0,0.95))
+plt.annotate("Ks = "+str(ks),xy=(0,0.9))
+plt.savefig("Graph/Student_Copula.png")
+plt.show()
+
+copula = GaussianCopula(corr=corr_matrix)
+copula.plot_scatter()
+plt.title("Gaussian Copula " + str(corr_matrix))
+aic = AIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("AIC = ", aic)
+bic = BIC(np.array(df.values), np.array(copula.rvs(nobs=598, random_state=None)), 2)
+print("BIC = ", bic)
+ks = Kolmogorov_Smirnov(np.array(df.values)[:,0], np.array(copula.rvs(nobs=598, random_state=None))[:,0])
+print("Kolmogorov_Smirnov = ", ks)
+plt.annotate("AIC = " + str(aic), xy=(0, 1))
+plt.annotate("BIC = " + str(bic), xy=(0, 0.95))
+plt.annotate("Ks = " + str(ks), xy=(0, 0.9))
+plt.savefig("Graph/Gaussian_Copula.png")
+plt.show()
+
 
 Obs = copulae.pseudo_obs(df.set_index("date")) #Observations pour générer le nuage de copules
 emp_cop = copulae.EmpiricalCopula(Obs, smoothing="beta")
