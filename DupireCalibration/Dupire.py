@@ -63,12 +63,6 @@ def DupirePrice(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,method='CEV'):
     return V
     
 def DupireVega(a,b,ag,mg,bg,pg,h,voltype):
-    T_max=0.5
-    K_max=20
-    M=49
-    N=199
-    T=np.linspace(0,T_max,M+2)
-    K=np.linspace(0,K_max,N+2)
     Vega=(DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,h,method=voltype)-DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,0,voltype))/h
     return Vega
 def UsefulDupirePrices(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,voltype):
