@@ -6,14 +6,14 @@ import math
 # =============================================================================
 # Local Volatility Model 
 # =============================================================================
-def LocalVolCEV(h,a,b,K,N):
-    Sigma=np.zeros(N+1)
-    for i in range(N+1):
+def LocalVolCEV(h,a,b,K):
+    Sigma=np.zeros(len(K))
+    for i in range(len(K)):
          Sigma[i]=a/K[i]**b +h
     return Sigma
-def LocalVolGatheral(h,ag,mg,bg,pg,K,N):
-     Sigma=np.zeros(N+1)
-     for i in range(N+1):
+def LocalVolGatheral(h,ag,mg,bg,pg,K):
+     Sigma=np.zeros(len(K))
+     for i in range(len(K)):
          Sigma[i]=bg*(pg*(K[i]-mg)+np.sqrt((K[i]-mg)**2 + ag**2)) +h
      return Sigma
  
@@ -35,9 +35,9 @@ def DupirePrice(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,method='CEV'):
         else:
             return 1
     if method=='CEV':
-        Sigma=LocalVolCEV(h,a,b,K,N)
+        Sigma=LocalVolCEV(h,a,b,K)
     elif method=='Gatheral':
-        Sigma=LocalVolGatheral(h,ag,mg,bg,pg,K,N)   
+        Sigma=LocalVolGatheral(h,ag,mg,bg,pg,K)   
        
     for i in range(N+2):
        V[0,i]=np.maximum(S0-K[i],0)
@@ -135,16 +135,9 @@ def LevenbergMarquardtGatheral(S0,r,T_max,K_max,M,N,epsilon,lamb):
         ag+=d[0]
         mg+=d[1]
     return ag,mg
-def LocalVolGatheralUseful(ag,mg,bg,pg):
-    K=np.arange(5,19,1)
-    Sigma=np.zeros((len(K)))
-    for i in range(len(K)):
-        Sigma[i]=bg*(pg*(K[i]-mg)+np.sqrt((K[i]-mg)**2 + ag**2)) 
-    
-    return K,Sigma
 a,m=LevenbergMarquardtGatheral(10,0.1,0.5,20,49,199,10**(-6),10**(-3))
-K,Sigma=LocalVolGatheralUseful(a,m,0.05,0.1)
-plt.plot(K,Sigma,color="g")
+Sigma=LocalVolGatheral(0,a,m,0.05,0.1,np.arange(5,19,1))
+plt.plot(np.arange(5,19,1),Sigma,color="g")
 plt.title('Local Volatility Gatheral')
 plt.xlabel('K')
 plt.ylabel('Volatility')
