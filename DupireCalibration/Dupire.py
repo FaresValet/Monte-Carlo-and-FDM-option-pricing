@@ -69,7 +69,7 @@ def DupirePrice(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,method='CEV'):
     return V
     
 def DupireVega(a,b,ag,mg,bg,pg,h,voltype):
-    Vega=(DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,h,method=voltype)-DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,0,voltype))/h
+    Vega=(DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,h,method=voltype)-DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,0,method=voltype))/h
     return Vega
 def UsefulDupirePrices(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,voltype):
     if voltype=='CEV':
