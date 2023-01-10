@@ -6,17 +6,7 @@ import math
 # =============================================================================
 # Local Volatility Model 
 # =============================================================================
-def LocalVolCEV(h,a,b,K):
-    Sigma=np.zeros(len(K))
-    for i in range(len(K)):
-         Sigma[i]=a/K[i]**b +h
-    return Sigma
-def LocalVolGatheral(h,ag,mg,bg,pg,K):
-     Sigma=np.zeros(len(K))
-     for i in range(len(K)):
-         Sigma[i]=bg*(pg*(K[i]-mg)+np.sqrt((K[i]-mg)**2 + ag**2)) +h
-     return Sigma
- 
+
 def DupirePrice(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,method='CEV'):
     Time=np.linspace(0,T_max,M+2)
     K=np.linspace(0,K_max,N+2)
@@ -35,10 +25,14 @@ def DupirePrice(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,method='CEV'):
         else:
             return 1
     if method=='CEV':
-        Sigma=LocalVolCEV(h,a,b,K)
+        def LocalVol(i,h):
+            Sigma=a/K[i]**b +h
+            return Sigma
     elif method=='Gatheral':
-        Sigma=LocalVolGatheral(h,ag,mg,bg,pg,K)   
-       
+        def LocalVol(i,h):
+            Sigma=bg*(pg*(K[i]-mg)+np.sqrt((K[i]-mg)**2 + ag**2)) +h
+            return Sigma
+        
     for i in range(N+2):
        V[0,i]=np.maximum(S0-K[i],0)
       
@@ -48,10 +42,10 @@ def DupirePrice(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,method='CEV'):
     
     for n in range(M+1):
         for i in range(1,N+1):
-            A[i]=0.25*dt*(r*K[i]/dk-Sigma[i]**2 *(K[i]/dk)**2)
-            D[i]=(1+0.5*dt*Sigma[i]**2*(K[i]/dk)**2)
-            B[i]=-0.25*dt*(r*K[i]/dk+Sigma[i]**2 * (K[i]/dk)**2)
-            C[n,i]=-A[i]*V[n,i+1]+(1-0.5*dt*Sigma[i]**2*(K[i]/dk)**2)*V[n,i] -B[i]*V[n,i-1]-kron(i,1)*B[1]*S0
+            A[i]=0.25*dt*(r*K[i]/dk-LocalVol(i,h)**2 *(K[i]/dk)**2)
+            D[i]=(1+0.5*dt*LocalVol(i,h)**2*(K[i]/dk)**2)
+            B[i]=-0.25*dt*(r*K[i]/dk+LocalVol(i,h)**2 * (K[i]/dk)**2)
+            C[n,i]=-A[i]*V[n,i+1]+(1-0.5*dt*LocalVol(i,h)**2*(K[i]/dk)**2)*V[n,i] -B[i]*V[n,i-1]-kron(i,1)*B[1]*S0
     
         Dstar[1]=D[1]
         Cstar[n,1]=C[n,1]
@@ -69,7 +63,13 @@ def DupirePrice(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,method='CEV'):
     return V
     
 def DupireVega(a,b,ag,mg,bg,pg,h,voltype):
-    Vega=(DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,h,method=voltype)-DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,0,method=voltype))/h
+    T_max=0.5
+    K_max=20
+    M=49
+    N=199
+    T=np.linspace(0,T_max,M+2)
+    K=np.linspace(0,K_max,N+2)
+    Vega=(DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,h,method=voltype)-DupirePrice(a,b,ag,mg,bg,pg,10,0.1,0.5,20,49,199,0,voltype))/h
     return Vega
 def UsefulDupirePrices(a,b,ag,mg,bg,pg,S0,r,T_max,K_max,M,N,h,voltype):
     if voltype=='CEV':
@@ -134,14 +134,8 @@ def LevenbergMarquardtGatheral(S0,r,T_max,K_max,M,N,epsilon,lamb):
         d=-np.dot(np.linalg.inv(M),J.T).dot(res.reshape((len(StrikesGatheral),1)))
         ag+=d[0]
         mg+=d[1]
-    return ag,mg
-a,m=LevenbergMarquardtGatheral(10,0.1,0.5,20,49,199,10**(-6),10**(-3))
-Sigma=LocalVolGatheral(0,a,m,0.05,0.1,np.arange(5,19,1))
-plt.plot(np.arange(5,19,1),Sigma,color="g")
-plt.title('Local Volatility Gatheral')
-plt.xlabel('K')
-plt.ylabel('Volatility')
-plt.show()
+    return ag,mg,np.linalg.norm(res,2)
+
 """plt.plot(K,V[30,:])
 fig = plt.figure()
 ax = plt.axes(projection='3d')
